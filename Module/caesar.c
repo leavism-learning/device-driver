@@ -113,18 +113,21 @@ static int encrypt(int key)
 {
 	int index;
 	int length = strlen(kernel_buffer);
-	for (index = 0; index < length; index++) {
-		char ch = kernel_buffer[index];
+	int overlap = key % 26;
+	if (overlap != 0) {
+		for (index = 0; index < length; index++) {
+			char ch = kernel_buffer[index];
 
-		if (ch >= 'A' && ch <= 'Z') {  // uppercase letters
-			ch = 'A' + ((ch - 'A' + key) % 26);
-		} else if (ch >= 'a' && ch <= 'z') {  // lowercase letters
-			ch = 'a' + ((ch - 'a' + key) % 26);
-		} else if (ch >= '0' && ch <= '9') {  // digits 0 - 9
-			ch = (ch - '0' - key + 10) % 10 + '0';
+			if (ch >= 'A' && ch <= 'Z') {  // uppercase letters
+				ch = 'A' + ((ch - 'A' + key) % 26);
+			} else if (ch >= 'a' && ch <= 'z') {  // lowercase letters
+				ch = 'a' + ((ch - 'a' + key) % 26);
+			}
+
+			kernel_buffer[index] = ch;
 		}
-		kernel_buffer[index] = ch;
 	}
+
 
 	printk(KERN_INFO "Encrypted Text:\n%s\n", kernel_buffer);
 	return 0;
@@ -134,17 +137,19 @@ static int decrypt(int key)
 {
 	int index;
 	int length = strlen(kernel_buffer);
-	for (index = 0; index < length; index++) {
-		char ch = kernel_buffer[index];
+	int overlap = key % 26;
+	if (overlap != 0) {
+		for (index = 0; index < length; index++) {
+			char ch = kernel_buffer[index];
 
-		if (ch >= 'A' && ch <= 'Z') {  // uppercase letters
-			ch = 'A' + ((ch - 'A' - key + 26) % 26);
-		} else if (ch >= 'a' && ch <= 'z') {  // lowercase letters
-			ch = 'a' + ((ch - 'a' - key + 26) % 26);
-		} else if (ch >= '0' && ch <= '9') {  // digits 0 - 9
-			ch = (ch - '0' + key) % 10 + '0';
+			if (ch >= 'A' && ch <= 'Z') {  // uppercase letters
+				ch = 'A' + ((ch - 'A' - key + (26 * overlap)) % 26);
+			} else if (ch >= 'a' && ch <= 'z') {  // lowercase letters
+				ch = 'a' + ((ch - 'a' - key + (26 * overlap)) % 26);
+			}
+
+			kernel_buffer[index] = ch;
 		}
-		kernel_buffer[index] = ch;
 	}
 
 	printk(KERN_INFO "Decrypted Text:\n%s\n", kernel_buffer);
