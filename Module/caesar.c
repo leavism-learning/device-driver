@@ -40,12 +40,15 @@ struct writeTracker {
 // Increments writeTracker's count
 // Returns how many bytes were passed in.
 // 0 is in, 1 is out, 2 is error, 3 is the first file handle
-static ssize_t myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
+static ssize_t
+myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
 {
 	struct writeTracker* tracker;
 	tracker = (struct writeTracker*) fs->private_data;
+
 	tracker->count = tracker->count + 1;
-	printk(KERN_INFO "Wrote %lu on write number %d\n", hsize, ds->count);
+
+	printk(KERN_INFO "Wrote %lu on write number %d\n", hsize, tracker->count);
 	return hsize;
 }
 
@@ -53,7 +56,9 @@ static ssize_t myRead(struct file* fs, char __user* buf, size_t hsize, loff_t* o
 {
 	struct writeTracker* tracker;
 	tracker = (struct writeTracker*) fs->private_data;
+
 	tracker->count = tracker->count + 1;
+
 	printk(KERN_INFO "Read %lu on write number %d\n", hsize, tracker->count);
 	return 0;
 }
@@ -77,50 +82,33 @@ static int myClose(struct inode* inode, struct file* fs)
 {
 	struct writeTracker* tracker;
 	tracker = (struct writeTracker*) fs->private_data;
+
 	vfree(tracker);
 	return 0;
 }
 
-// Handles device files that don't have a read or write
-// Counts how many times write was called
-static long myIoCtl(struct file* fs, unsigned int command, unsigned long data)
+static int encrypt(int key)
 {
-	int* count;
-	struct writeTracker* tracker;
-	tracker = (struct writeTracker*) fs->private_data;
-	if (command != 3) {
-		printk(KERN_ERR "IoCtl failed.\n");
-		return -1;
+	int i;
+	int length = strlen(kernel_buffer);
+	for (i = 0; i < length - 1; i++) {
+		char ch = kernel_buffer[i];
+
+		if (ch >= 'A' && ch <= 'Z') {// uppercase letters
+			ch = 'A' + ((ch - 'A' + key) % 26);
+		} else if (ch >= 'a' && ch <= 'z') {// lowercase letters
+			ch = 'a' + ((ch - 'a' + key) % 26);
+		} else if (ch >= '0' && ch <= '9') {// digits 0 - 9
+			ch = (ch - '0' - key + 10) % 10 + '0';
+		}
 	}
-	count = (int*) data;
-	*count = tracker->count;
+
+	printk(KERN_INFO "Encrypted Text:\n%s\n", kernel_buffer);
 	return 0;
 }
 
-int init_module(void)
+static long myIoCtl(struct file* fs, unsigned int command, unsigned long data)
 {
-	int result, registers;
-	dev_t devno;
-
-	devno = MKDEV(MY_MAJOR, MY_MINOR);
-
-	registers = register_chrdev_region(devno, 1, DEVICE_NAME);
-	printk(KERN_INFO "Register chardev succeeded 1: %d\n", registers);
-	cdev_init(&my_cdev, &fops);
-}
-
-void cleanup_module(void)
-{
-	dev_t devno;
-
-	devno = MKDEV(MY_MAJOR, MY_MINOR);
-	unregister_chrdev_region(devno, 1);
-	cdev_del(&my_cdev);
-
-	vfree(kernel_buffer);
-	kernel_buffer = NULL;
-
-	printk(KERN_INFO "Goodbye world.\n");
 }
 
 struct file_operations fops = {
@@ -130,4 +118,35 @@ struct file_operations fops = {
 				.read = myRead,
 				.unlocked_ioctl = myIoCtl,
 				.owner = THIS_MODULE,
+};
+
+int init_module(void)
+{
+	int result, registers;
+	dev_t deviceNum;
+
+	// Combines major and minor to produce a device ID
+	deviceNum = MKDEV(MY_MAJOR, MY_MINOR);
+
+	registers = register_chrdev_region(deviceNum, 1, DEVICE_NAME);
+	printk(KERN_INFO "Register chardev succeeded 1: %d\n", registers);
+	cdev_init(&my_cdev, &fops);
+
+	result = cdev_add(&my_cdev, deviceNum, 1);
+
+	return result;
+}
+
+void cleanup_module(void)
+{
+	dev_t deviceNum;
+
+	deviceNum = MKDEV(MY_MAJOR, MY_MINOR);
+	unregister_chrdev_region(deviceNum, 1);
+	cdev_del(&my_cdev);
+
+	vfree(kernel_buffer);
+	kernel_buffer = NULL;
+
+	printk(KERN_INFO "Goodbye world.\n");
 }
