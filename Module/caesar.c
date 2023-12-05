@@ -23,6 +23,7 @@
 #define MY_MAJOR 415
 #define MY_MINOR 0
 #define DEVICE_NAME "caesar"
+#define KEY 5  // Default key
 
 char* kernel_buffer;
 
@@ -35,6 +36,7 @@ MODULE_LICENSE("GPL");
 // Tracks how many times data was written
 struct caesarTracker {
 	// TODO Fill as needed
+	int key;  // Caesar Cipher key
 } caesarTracker;
 
 // Copies the user buffer to the kernel buffer and encrypts it.
@@ -90,7 +92,7 @@ static int myOpen(struct inode* inode, struct file* fs)
 		return -1;
 	}
 
-	tracker->count = 0;
+	tracker->key = KEY;
 	fs->private_data = tracker;
 	return 0;
 }
@@ -111,11 +113,11 @@ static int encrypt(int key)
 	for (i = 0; i < length - 1; i++) {
 		char ch = kernel_buffer[i];
 
-		if (ch >= 'A' && ch <= 'Z') {// uppercase letters
+		if (ch >= 'A' && ch <= 'Z') {  // uppercase letters
 			ch = 'A' + ((ch - 'A' + key) % 26);
-		} else if (ch >= 'a' && ch <= 'z') {// lowercase letters
+		} else if (ch >= 'a' && ch <= 'z') {  // lowercase letters
 			ch = 'a' + ((ch - 'a' + key) % 26);
-		} else if (ch >= '0' && ch <= '9') {// digits 0 - 9
+		} else if (ch >= '0' && ch <= '9') {  // digits 0 - 9
 			ch = (ch - '0' - key + 10) % 10 + '0';
 		}
 	}
