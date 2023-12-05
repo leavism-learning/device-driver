@@ -26,6 +26,8 @@
 #define KEY 5  // Default key
 
 #define ENCRYPT _IO('e', 0)
+#define DECRYPT _IO('e', 1)
+#define SETKEY _IO('e', 2)
 
 static int encrypt(int key);
 static int decrypt(int key);
@@ -61,8 +63,6 @@ myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
 	}
 	printk(KERN_INFO "Copied %lu to the kernel buffer.\n", hsize);
 
-	encrypt(tracker->key);
-
 	return hsize;
 }
 
@@ -80,8 +80,6 @@ static ssize_t myRead(struct file* fs, char __user* buf, size_t hsize, loff_t* o
 		printk(KERN_ERR "Failed to copy_from_user into the user buffer.\n");
 		return -1;
 	}
-
-	decrypt(tracker->key);
 
 	printk(KERN_INFO "Copied %lu to the user buffer.\n", hsize);
 	return 0;
@@ -165,8 +163,13 @@ static long myIoCtl(struct file* fs, unsigned int command, unsigned long data)
 		case ENCRYPT:
 			result = encrypt(tracker->key);
 			break;
-		// TODO Handle decrypt command
-		// TODO Handle setkey command
+		case DECRYPT:
+			result = decrypt(tracker->key);
+			break;
+		case SETKEY:
+			tracker->key = (int) data;
+			result = 0;
+			break;
 		default:
 			printk(KERN_ERR "Failed IOCTL.\n");
 			result = -1;
