@@ -25,6 +25,8 @@
 #define DEVICE_NAME "caesar"
 #define KEY 5  // Default key
 
+#define ENCRYPT _IO('e', 0)
+
 char* kernel_buffer;
 
 struct cdev my_cdev;
@@ -64,7 +66,8 @@ myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
 
 static ssize_t myRead(struct file* fs, char __user* buf, size_t hsize, loff_t* off)
 {
-	int error, length;
+	int error;
+	int length;
 	struct caesarTracker* tracker;
 
 	tracker = (struct caesarTracker*) fs->private_data;
@@ -108,10 +111,10 @@ static int myClose(struct inode* inode, struct file* fs)
 
 static int encrypt(int key)
 {
-	int i;
+	int index;
 	int length = strlen(kernel_buffer);
-	for (i = 0; i < length - 1; i++) {
-		char ch = kernel_buffer[i];
+	for (index = 0; index < length - 1; index++) {
+		char ch = kernel_buffer[index];
 
 		if (ch >= 'A' && ch <= 'Z') {  // uppercase letters
 			ch = 'A' + ((ch - 'A' + key) % 26);
@@ -128,6 +131,21 @@ static int encrypt(int key)
 
 static long myIoCtl(struct file* fs, unsigned int command, unsigned long data)
 {
+	int result;
+	struct caesarTracker* tracker;
+
+	tracker = (struct caesarTracker*) fs->private_data;
+
+	switch (command) {
+		case ENCRYPT:
+			result = encrypt(tracker->key);
+			break;
+		default:
+			printk(KERN_ERR "Failed IOCTL.\n");
+			result = -1;
+	}
+
+	return result;
 }
 
 struct file_operations fops = {
