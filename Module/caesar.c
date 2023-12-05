@@ -56,10 +56,9 @@ myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
 		printk(KERN_ERR "Failed to copy_from_user into the kernel_buffer.\n");
 		return -1;
 	}
-
 	printk(KERN_INFO "Copied %lu to the kernel buffer.\n", hsize);
 
-	// TODO Call encrypt(key);
+	encrypt(tracker->key);
 
 	return hsize;
 }
@@ -140,6 +139,8 @@ static long myIoCtl(struct file* fs, unsigned int command, unsigned long data)
 		case ENCRYPT:
 			result = encrypt(tracker->key);
 			break;
+		// TODO Handle decrypt command
+		// TODO Handle setkey command
 		default:
 			printk(KERN_ERR "Failed IOCTL.\n");
 			result = -1;
