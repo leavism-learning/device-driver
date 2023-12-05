@@ -27,6 +27,9 @@
 
 #define ENCRYPT _IO('e', 0)
 
+static int encrypt(int key);
+static int decrypt(int key);
+
 char* kernel_buffer;
 
 struct cdev my_cdev;
@@ -78,7 +81,7 @@ static ssize_t myRead(struct file* fs, char __user* buf, size_t hsize, loff_t* o
 		return -1;
 	}
 
-	// TODO Call decrypt(key)
+	decrypt(tracker->key);
 
 	printk(KERN_INFO "Copied %lu to the user buffer.\n", hsize);
 	return 0;
@@ -112,7 +115,7 @@ static int encrypt(int key)
 {
 	int index;
 	int length = strlen(kernel_buffer);
-	for (index = 0; index < length - 1; index++) {
+	for (index = 0; index < length; index++) {
 		char ch = kernel_buffer[index];
 
 		if (ch >= 'A' && ch <= 'Z') {  // uppercase letters
@@ -122,11 +125,34 @@ static int encrypt(int key)
 		} else if (ch >= '0' && ch <= '9') {  // digits 0 - 9
 			ch = (ch - '0' - key + 10) % 10 + '0';
 		}
+		kernel_buffer[index] = ch;
 	}
 
 	printk(KERN_INFO "Encrypted Text:\n%s\n", kernel_buffer);
 	return 0;
 }
+
+static int decrypt(int key)
+{
+	int index;
+	int length = strlen(kernel_buffer);
+	for (index = 0; index < length; index++) {
+		char ch = kernel_buffer[index];
+
+		if (ch >= 'A' && ch <= 'Z') {  // uppercase letters
+			ch = 'A' + ((ch - 'A' - key + 26) % 26);
+		} else if (ch >= 'a' && ch <= 'z') {  // lowercase letters
+			ch = 'a' + ((ch - 'a' - key + 26) % 26);
+		} else if (ch >= '0' && ch <= '9') {  // digits 0 - 9
+			ch = (ch - '0' + key) % 10 + '0';
+		}
+		kernel_buffer[index] = ch;
+	}
+
+	printk(KERN_INFO "Decrypted Text:\n%s\n", kernel_buffer);
+	return 0;
+}
+
 
 static long myIoCtl(struct file* fs, unsigned int command, unsigned long data)
 {
@@ -169,6 +195,12 @@ int init_module(void)
 	registers = register_chrdev_region(deviceNum, 1, DEVICE_NAME);
 	printk(KERN_INFO "Register chardev succeeded 1: %d\n", registers);
 	cdev_init(&my_cdev, &fops);
+
+	kernel_buffer = vmalloc(512);
+	if (kernel_buffer == NULL) {
+		printk(KERN_ERR "Failed to vmalloc kernel_buffer.\n");
+		return -1;
+	}
 
 	result = cdev_add(&my_cdev, deviceNum, 1);
 
