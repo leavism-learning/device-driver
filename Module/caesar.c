@@ -33,9 +33,9 @@ MODULE_DESCRIPTION("A simple Caesar Cipher program");
 MODULE_LICENSE("GPL");
 
 // Tracks how many times data was written
-struct writeTracker {
-	int count;
-} writeTracker;
+struct caesarTracker {
+	// TODO Fill as needed
+} caesarTracker;
 
 // Increments writeTracker's count
 // Returns how many bytes were passed in.
@@ -43,21 +43,29 @@ struct writeTracker {
 static ssize_t
 myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
 {
-	struct writeTracker* tracker;
-	tracker = (struct writeTracker*) fs->private_data;
+	int error;
+	struct caesarTracker* tracker;
 
-	tracker->count = tracker->count + 1;
+	tracker = (struct caesarTracker*) fs->private_data;
+	error = copy_from_user(kernel_buffer + *off, buf, hsize);
 
-	printk(KERN_INFO "Wrote %lu on write number %d\n", hsize, tracker->count);
+	if (error != 0) {
+		printk(KERN_ERR "Failed to copy_from_user.\n");
+		return -1;
+	}
+
+	printk(KERN_INFO "Copied %lu to the kernel buffer.\n", hsize);
+
+	// TODO Call encrypt(key);
+
 	return hsize;
 }
 
 static ssize_t myRead(struct file* fs, char __user* buf, size_t hsize, loff_t* off)
 {
-	struct writeTracker* tracker;
-	tracker = (struct writeTracker*) fs->private_data;
+	struct caesarTracker* tracker;
+	tracker = (struct caesarTracker*) fs->private_data;
 
-	tracker->count = tracker->count + 1;
 
 	printk(KERN_INFO "Read %lu on write number %d\n", hsize, tracker->count);
 	return 0;
@@ -65,8 +73,8 @@ static ssize_t myRead(struct file* fs, char __user* buf, size_t hsize, loff_t* o
 
 static int myOpen(struct inode* inode, struct file* fs)
 {
-	struct writeTracker* tracker;
-	tracker = vmalloc(sizeof(struct writeTracker));
+	struct caesarTracker* tracker;
+	tracker = vmalloc(sizeof(struct caesarTracker));
 
 	if (tracker == 0) {
 		printk(KERN_ERR "Failed to vmalloc.\n");
@@ -80,8 +88,8 @@ static int myOpen(struct inode* inode, struct file* fs)
 
 static int myClose(struct inode* inode, struct file* fs)
 {
-	struct writeTracker* tracker;
-	tracker = (struct writeTracker*) fs->private_data;
+	struct caesarTracker* tracker;
+	tracker = (struct caesarTracker*) fs->private_data;
 
 	vfree(tracker);
 	return 0;
