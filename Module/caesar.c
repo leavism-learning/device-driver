@@ -37,9 +37,8 @@ struct caesarTracker {
 	// TODO Fill as needed
 } caesarTracker;
 
-// Increments writeTracker's count
-// Returns how many bytes were passed in.
-// 0 is in, 1 is out, 2 is error, 3 is the first file handle
+// Copies the user buffer to the kernel buffer and encrypts it.
+// Returns how many bytes were passed in, or -1 on failure.
 static ssize_t
 myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
 {
@@ -47,10 +46,10 @@ myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
 	struct caesarTracker* tracker;
 
 	tracker = (struct caesarTracker*) fs->private_data;
-	error = copy_from_user(kernel_buffer + *off, buf, hsize);
 
+	error = copy_from_user(kernel_buffer + *off, buf, hsize);
 	if (error != 0) {
-		printk(KERN_ERR "Failed to copy_from_user.\n");
+		printk(KERN_ERR "Failed to copy_from_user into the kernel_buffer.\n");
 		return -1;
 	}
 
@@ -63,11 +62,21 @@ myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
 
 static ssize_t myRead(struct file* fs, char __user* buf, size_t hsize, loff_t* off)
 {
+	int error, length;
 	struct caesarTracker* tracker;
+
 	tracker = (struct caesarTracker*) fs->private_data;
+	length = strlen(kernel_buffer);
 
+	error = copy_to_user(buf, kernel_buffer + *off, hsize);
+	if (error != 0) {
+		printk(KERN_ERR "Failed to copy_from_user into the user buffer.\n");
+		return -1;
+	}
 
-	printk(KERN_INFO "Read %lu on write number %d\n", hsize, tracker->count);
+	// TODO Call decrypt(key)
+
+	printk(KERN_INFO "Copied %lu to the user buffer.\n", hsize);
 	return 0;
 }
 
