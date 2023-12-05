@@ -7,7 +7,7 @@
 *
 * File: caesar.c
 *
-* Description: The program for the Caesar Cipher encryption
+* Description: The device driver for the Caesar Cipher encryption
 * device driver. It takes character input and applies a
 * Caesar cipher.
 *
@@ -42,11 +42,10 @@ MODULE_LICENSE("GPL");
 
 // Tracks how many times data was written
 struct caesarTracker {
-	// TODO Fill as needed
 	int key;  // Caesar Cipher key
 } caesarTracker;
 
-// Copies the user buffer to the kernel buffer and encrypts it.
+// Copies the user buffer to the kernel buffer.
 // Returns how many bytes were passed in, or -1 on failure.
 static ssize_t
 myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
@@ -55,7 +54,6 @@ myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
 	struct caesarTracker* tracker;
 
 	tracker = (struct caesarTracker*) fs->private_data;
-
 	error = copy_from_user(kernel_buffer + *off, buf, hsize);
 	if (error != 0) {
 		printk(KERN_ERR "Failed to copy_from_user into the kernel_buffer.\n");
@@ -66,6 +64,8 @@ myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
 	return hsize;
 }
 
+// Copies the kernal buffer to the user buffer.
+// Returns how many bytes were passed in, or -1 on failure.
 static ssize_t myRead(struct file* fs, char __user* buf, size_t hsize, loff_t* off)
 {
 	int error;
@@ -85,6 +85,8 @@ static ssize_t myRead(struct file* fs, char __user* buf, size_t hsize, loff_t* o
 	return 0;
 }
 
+// Opens the file.
+// Returns 0 on success.
 static int myOpen(struct inode* inode, struct file* fs)
 {
 	struct caesarTracker* tracker;
@@ -100,6 +102,8 @@ static int myOpen(struct inode* inode, struct file* fs)
 	return 0;
 }
 
+// Closes the file and frees any allocated memory.
+// Returns 0 on success.
 static int myClose(struct inode* inode, struct file* fs)
 {
 	struct caesarTracker* tracker;
@@ -109,6 +113,8 @@ static int myClose(struct inode* inode, struct file* fs)
 	return 0;
 }
 
+// Encrypts the kernel buffer with a Caesar Cipher.
+// Returns 0 on success.
 static int encrypt(int key)
 {
 	int index;
@@ -133,6 +139,8 @@ static int encrypt(int key)
 	return 0;
 }
 
+// Decrypts the kernel buffer with a Caesar Cipher.
+// Returns 0 on success.
 static int decrypt(int key)
 {
 	int index;
@@ -156,7 +164,9 @@ static int decrypt(int key)
 	return 0;
 }
 
-
+// Handles the logic for the IO controller
+// Does the appropriate function call based on the passed in command and data.
+// Returns 0 on success.
 static long myIoCtl(struct file* fs, unsigned int command, unsigned long data)
 {
 	int result;
