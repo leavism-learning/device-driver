@@ -47,8 +47,7 @@ struct caesarTracker {
 
 // Copies the user buffer to the kernel buffer.
 // Returns how many bytes were passed in, or -1 on failure.
-static ssize_t
-myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
+static ssize_t myWrite(struct file* fs, const char __user* buf, size_t hsize, loff_t* off)
 {
 	int error;
 	struct caesarTracker* tracker;
