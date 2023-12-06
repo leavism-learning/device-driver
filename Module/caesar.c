@@ -23,11 +23,11 @@
 #define MY_MAJOR 415
 #define MY_MINOR 0
 #define DEVICE_NAME "caesar"
-#define KEY 5  // Default key
+#define KEY 0  // Default key is no encryption
 
 #define ENCRYPT _IO('e', 0)
 #define DECRYPT _IO('e', 1)
-#define SETKEY _IO('e', 2)
+#define SETKEY _IO('e', 3)
 
 static int encrypt(int key);
 static int decrypt(int key);
@@ -133,7 +133,6 @@ static int encrypt(int key)
 			kernel_buffer[index] = ch;
 		}
 	}
-
 
 	printk(KERN_INFO "Encrypted Text:\n%s\n", kernel_buffer);
 	return 0;
