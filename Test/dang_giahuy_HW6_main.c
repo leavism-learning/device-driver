@@ -40,11 +40,37 @@ int isOnlyWhitespace(const char* str)
 int main(int argc, char* argv[])
 {
 	int key, fd;
-	char* keystring = malloc(MAX_KEYCHARS);
 	char* endPtr;
+
+	char* keystring = malloc(MAX_KEYCHARS);
+	if (keystring == NULL) {
+		perror("Failed to allocate memory for keystring");
+		return -1;
+	}
+
 	char* text = malloc(MAX_CHARS);
+	if (text == NULL) {
+		perror("Failed to allocate memory for text");
+		free(keystring);
+		return -1;
+	}
+
 	char* response = malloc(MAX_CHARS);
+	if (response == NULL) {
+		perror("Failed to allocate memory for response");
+		free(keystring);
+		free(text);
+		return -1;
+	}
+
 	char* again = malloc(MAX_CHARS);
+	if (again == NULL) {
+		perror("Failed to allocate memory for again");
+		free(keystring);
+		free(text);
+		free(response);
+		return -1;
+	}
 
 	while (1) {
 		fd = open("/dev/caesar", O_RDWR);
